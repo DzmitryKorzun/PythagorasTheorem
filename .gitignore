@@ -41,6 +41,7 @@ CMakeCache.txt
 CMakeScripts/
 CTestTestfile.cmake
 Testing/
+FileContentIndex/
 
 # Sublime Text directories
 .svn/
