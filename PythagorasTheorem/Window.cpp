@@ -5,7 +5,10 @@
 
 Window::Window()
 {
+ 
 }
+
+HWND Window::m_hWnd = nullptr;
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -13,10 +16,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
     {
     case WM_CREATE:
     {
-        Window* window = (Window*)((LPCREATESTRUCT)lParam)->lpCreateParams;
-        SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)
-            window);
-        window->OnCreate();
+        LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>
+            (pCreateStruct->lpCreateParams));
         break;
     }
     case WM_DESTROY:
@@ -26,14 +28,62 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
         PostQuitMessage(0);
         break;
     }
-
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
 }
 
+int Window::RUN(IDX* idxGame, HINSTANCE hInstance, int nCmdShow)
+{
+    WNDCLASSEX wc = { 0 };
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = WindowProc;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.cbWndExtra = NULL;
+    wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
+    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hInstance = NULL;
+    wc.lpszClassName = L"WindowClass";
 
+    RegisterClassEx(&wc);
 
+    RECT windowRECT = { 0, 0, static_cast<LONG>(idxGame->GetWidth()), static_cast<LONG>(idxGame->GetHeight())};
+
+    AdjustWindowRect(&windowRECT, WS_OVERLAPPEDWINDOW, false);
+
+    m_hWnd = CreateWindow(
+        wc.lpszClassName,
+        idxGame->GetTitle(),
+        WS_EX_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        windowRECT.right-windowRECT.left,
+        windowRECT.bottom-windowRECT.top,
+        nullptr,
+        nullptr,
+        hInstance,
+        idxGame);
+
+    idxGame->OnInit();
+    ShowWindow(m_hWnd, nCmdShow);
+
+    MSG msg = {};
+    while (msg.message != WM_QUIT)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+
+    idxGame->OnDestroy();
+
+    return static_cast<char>(msg.wParam);
+}
 
 bool Window::Init()
 {
@@ -42,7 +92,6 @@ bool Window::Init()
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.cbClsExtra = NULL;
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.cbWndExtra = NULL;
     wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
@@ -53,7 +102,7 @@ bool Window::Init()
 
     if (!::RegisterClassEx(&wc))
         return false;
-    hWnd = :: CreateWindowEx(
+    m_hWnd = :: CreateWindowEx(
         WS_EX_OVERLAPPEDWINDOW, 
         L"WindowClass", 
         L"Pythagoras theorem",
@@ -67,13 +116,13 @@ bool Window::Init()
         NULL, 
         this);
 
-    if(!hWnd)
+    if(!m_hWnd)
     {
         throw std::runtime_error("Sorry, something went up our ass when initialising the window");
     }
 
-    ::ShowWindow(hWnd, SW_SHOW);
-    ::UpdateWindow(hWnd);
+    ::ShowWindow(m_hWnd, SW_SHOW);
+    ::UpdateWindow(m_hWnd);
 
     isRunning = true;
 
@@ -100,7 +149,7 @@ bool Window::IsWindowRunning()
 
 bool Window::Realise()
 {
-    if (::DestroyWindow(hWnd))
+    if (::DestroyWindow(m_hWnd))
     {
         return false;
     }

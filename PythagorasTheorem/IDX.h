@@ -13,8 +13,9 @@ public:
 	virtual void OnRender() = 0;
 	virtual void OnDestroy() = 0;
 
-	UINT GetWidth() const { return m_width; };
-	UINT GetHeight() const { return m_height; };
+	UINT GetWidth() const { return m_width; }
+	UINT GetHeight() const { return m_height; }
+	const WCHAR* GetTitle() const { return m_title.c_str(); }
 
 protected:
 

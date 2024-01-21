@@ -1,14 +1,7 @@
 #include "MyAppWindow.h"
-
+#include "Game.h"
 int main()
 {
-	MyAppWindow application;
-	if (application.Init())
-	{
-		while (application.IsWindowRunning())
-		{
-			application.BroadCast();
-		}
-	}
-	return 0;	
+	Game game(800, 600, L"lalala");
+	return Window::RUN(&game, nullptr, SW_SHOW);
 }
