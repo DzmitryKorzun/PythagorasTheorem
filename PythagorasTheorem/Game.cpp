@@ -146,7 +146,67 @@ void Game::LoadAssets()
 	compileFlags = 0;
 #endif
 	D3DCompileFromFile(GetAssetsFullPath(L"shader.hlsl").c_str(), nullptr, nullptr, 
-		"VsMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr);
+		"VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr);	
+	D3DCompileFromFile(GetAssetsFullPath(L"shader.hlsl").c_str(), nullptr, nullptr, 
+		"PSMain", "vs_5_0", compileFlags, 0, &pixelShader, nullptr);
+
+	D3D12_INPUT_ELEMENT_DESC inputElementDescriptors[]
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	};
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDescriptor = {};
+	psoDescriptor.InputLayout =
+	{
+		inputElementDescriptors,
+		_countof(inputElementDescriptors)
+	};
+	psoDescriptor.pRootSignature = m_rootSignature.Get();
+	psoDescriptor.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+	psoDescriptor.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+	psoDescriptor.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDescriptor.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDescriptor.DepthStencilState.DepthEnable = FALSE;
+	psoDescriptor.DepthStencilState.StencilEnable = FALSE;
+	psoDescriptor.SampleMask = UINT_MAX;
+	psoDescriptor.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDescriptor.NumRenderTargets = 1;
+	psoDescriptor.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDescriptor.SampleDesc.Count = 1;
+	m_device->CreateGraphicsPipelineState(&psoDescriptor, IID_PPV_ARGS
+	(&m_pipelineState));
+
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+		m_CommandAllLocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList));
+
+	m_commandList->Close();
+
+	Vertex triangleVertex[] =
+	{
+		{{0.0f,0.25f * m_aspectRatio,0.0f},{1.0f,0.0f,0.0f,1.0f}},
+		{{0.25f,-0.25f * m_aspectRatio,0.0f},{0.0f,1.0f,0.0f,1.0f}},
+		{{0.0f,0.25f * m_aspectRatio,0.0f},{1.0f,0.0f,1.0f,1.0f}},
+	};
+
+	const UINT vertexBufferSize = sizeof(triangleVertex);
+	CD3DX12_HEAP_PROPERTIES heapProperties = {};
+	heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	CD3DX12_RESOURCE_DESC resourceDescriptor = CD3DX12_RESOURCE_DESC::Buffer((vertexBufferSize);
+	m_device->CreateCommittedResource(
+		&heapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDescriptor,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_vertexBuffer));
+
+	UINT8* pVertexDataBegin;
+	CD3DX12_RANGE readRange(0, 0);
+	m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>
+		(&pVertexDataBegin));
+	memcpy(pVertexDataBegin, triangleVertex, sizeof(triangleVertex));
+	m_vertexBuffer->Unmap(0, nullptr);
 
 
 }
