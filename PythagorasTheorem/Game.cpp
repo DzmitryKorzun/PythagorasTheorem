@@ -5,9 +5,13 @@
 #include "Window.h"
 #include "d3dcompiler.h"
 
-Game::Game(UINT width, UINT height, std::wstring name) : IDX (width, height, name)
+Game::Game(UINT width, UINT height, std::wstring name)
+	:IDX(width, height, name),
+	m_frameIndex(0),
+	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
+	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
+	m_rtvDescriptorSize(0)
 {
-
 }
 
 void Game::OnInit()
@@ -23,12 +27,17 @@ void Game::OnUpdate()
 
 void Game::OnRender()
 {
-
+	PopulateCommandList();
+	ID3D12CommandList* ppCommandList[] = { m_commandList.Get() };
+	m_CommandQueue->ExecuteCommandLists(_countof(ppCommandList), ppCommandList);
+	m_swapChain->Present(0, 1);
+	WaitForPreviousFrame();
 }
 
 void Game::OnDestroy()
 {
-
+	WaitForPreviousFrame();
+	CloseHandle(m_fenceEvent);
 }
 
 void Game::LoadPipeLine()
@@ -145,9 +154,9 @@ void Game::LoadAssets()
 #else
 	compileFlags = 0;
 #endif
-	D3DCompileFromFile(GetAssetsFullPath(L"shader.hlsl").c_str(), nullptr, nullptr, 
+	D3DCompileFromFile(GetAssetsFullPath(L"Shader.hlsl").c_str(), nullptr, nullptr, 
 		"VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr);	
-	D3DCompileFromFile(GetAssetsFullPath(L"shader.hlsl").c_str(), nullptr, nullptr, 
+	D3DCompileFromFile(GetAssetsFullPath(L"Shader.hlsl").c_str(), nullptr, nullptr, 
 		"PSMain", "vs_5_0", compileFlags, 0, &pixelShader, nullptr);
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescriptors[]
@@ -192,7 +201,7 @@ void Game::LoadAssets()
 	const UINT vertexBufferSize = sizeof(triangleVertex);
 	CD3DX12_HEAP_PROPERTIES heapProperties = {};
 	heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	CD3DX12_RESOURCE_DESC resourceDescriptor = CD3DX12_RESOURCE_DESC::Buffer((vertexBufferSize);
+	CD3DX12_RESOURCE_DESC resourceDescriptor = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
 	m_device->CreateCommittedResource(
 		&heapProperties,
 		D3D12_HEAP_FLAG_NONE,
@@ -208,15 +217,61 @@ void Game::LoadAssets()
 	memcpy(pVertexDataBegin, triangleVertex, sizeof(triangleVertex));
 	m_vertexBuffer->Unmap(0, nullptr);
 
+	m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+	m_vertexBufferView.SizeInBytes = sizeof(Vertex);
+	m_vertexBufferView.SizeInBytes = vertexBufferSize;
+
+	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence));
+	m_fenceValue = 1;
+	m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (m_fenceEvent == nullptr)
+	{
+		std::throw_with_nested(HRESULT_FROM_WIN32(GetLastError()));
+	}
+		 
+	WaitForPreviousFrame();
 
 }
 
 void Game::PopulateCommandList()
 {
+	CD3DX12_RESOURCE_BARRIER transitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+	m_CommandAllLocator->Reset();
+	m_commandList->Reset(m_CommandAllLocator.Get(), m_pipelineState.Get());
+	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+	m_commandList->RSSetViewports(1, &m_viewport);
+	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+	m_commandList->ResourceBarrier(1, &transitionBarrier);
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+
+	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+	const float bgClearColor[] = { 1.0f,1.0f,1.0f };
+	m_commandList->ClearRenderTargetView(rtvHandle, bgClearColor, 0, nullptr);
+	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+	m_commandList->DrawInstanced(3, 1, 0, 0);
+
+	transitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+	m_commandList->ResourceBarrier(1, &transitionBarrier);
+	m_commandList->Close();
 }
 
 void Game::WaitForPreviousFrame()
 {
+	const UINT64 fence = m_fenceValue;
+	m_CommandQueue->Signal(m_fence.Get(), fence);
+	m_fenceValue++;
 
+	if (m_fence->GetCompletedValue() < fence)
+	{
+		m_fence->SetEventOnCompletion(fence, m_fenceEvent);
+		WaitForSingleObject(m_fenceEvent, INFINITE);
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	}			
 }

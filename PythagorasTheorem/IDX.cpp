@@ -27,7 +27,7 @@ IDX::~IDX()
 _Use_decl_annotations_
 std::wstring IDX::GetAssetsFullPath(LPCWSTR assetsName)
 {
-	return m_assetsPath + assetsName;
+	return m_assetsPath + L"\\" + assetsName;
 }
 
 void IDX::GetAssetsPath(WCHAR* assetPath, size_t bufferSize)
