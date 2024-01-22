@@ -50,5 +50,8 @@
     <ClInclude Include="Game.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="C:\Users\Dzmitry\Downloads\d3dx12.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
