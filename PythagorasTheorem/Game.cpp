@@ -3,6 +3,7 @@
 #include "d3dx12.h"
 #include <wrl.h>
 #include "Window.h"
+#include "d3dcompiler.h"
 
 Game::Game(UINT width, UINT height, std::wstring name) : IDX (width, height, name)
 {
@@ -134,6 +135,18 @@ void Game::LoadAssets()
 
 	D3D12SerializeRootSignature(&rootSignatureDescriptor, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
 	m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
+
+	Microsoft::WRL::ComPtr <ID3DBlob> vertexShader;
+	Microsoft::WRL::ComPtr <ID3DBlob> pixelShader;
+
+
+#if defined(_DEBUG)
+	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	compileFlags = 0;
+#endif
+	D3DCompileFromFile(GetAssetsFullPath(L"shader.hlsl").c_str(), nullptr, nullptr, 
+		"VsMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr);
 
 
 }

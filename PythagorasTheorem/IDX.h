@@ -17,6 +17,10 @@ public:
 	UINT GetHeight() const { return m_height; }
 	const WCHAR* GetTitle() const { return m_title.c_str(); }
 
+	std::wstring GetAssetsFullPath(LPCWSTR assetsName);
+
+	void GetAssetsPath(WCHAR* assetPath, size_t bufferSize);
+
 protected:
 
 	void GetHardwareAdapter(_In_  IDXGIFactory1* pFactory, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter, 
@@ -34,5 +38,7 @@ protected:
 private:
 
 	std::wstring m_title;
+	std::wstring m_assetsPath;
+
 
 };
