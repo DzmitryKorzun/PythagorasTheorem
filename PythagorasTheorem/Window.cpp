@@ -2,6 +2,7 @@
 #include "stdexcept"
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <Game.h>
 
 Window::Window()
 {
@@ -10,8 +11,10 @@ Window::Window()
 
 HWND Window::m_hWnd = nullptr;
 
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    Game* gameOne = reinterpret_cast<Game*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
     switch (message)
     {
     case WM_CREATE:
@@ -20,6 +23,16 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>
             (pCreateStruct->lpCreateParams));
         break;
+    }
+    return 0;
+    case WM_PAINT:
+    {
+        if (gameOne)
+        {
+            gameOne->OnUpdate();
+            gameOne->OnRender();
+        }
+        return 0;
     }
     case WM_DESTROY:
     {
@@ -31,6 +44,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
+
+    return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
 int Window::RUN(IDX* idxGame, HINSTANCE hInstance, int nCmdShow)

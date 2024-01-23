@@ -181,7 +181,7 @@ void Game::LoadAssets()
 	psoDescriptor.SampleMask = UINT_MAX;
 	psoDescriptor.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDescriptor.NumRenderTargets = 1;
-	psoDescriptor.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDescriptor.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
 	psoDescriptor.SampleDesc.Count = 1;
 	m_device->CreateGraphicsPipelineState(&psoDescriptor, IID_PPV_ARGS
 	(&m_pipelineState));

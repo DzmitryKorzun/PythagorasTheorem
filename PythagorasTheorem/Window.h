@@ -22,5 +22,7 @@ public:
 protected:
 	static HWND m_hWnd;
 	bool isRunning;
+
+	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 };
 
