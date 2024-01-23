@@ -27,15 +27,22 @@ IDX::~IDX()
 _Use_decl_annotations_
 std::wstring IDX::GetAssetsFullPath(LPCWSTR assetsName)
 {
-	return m_assetsPath + L"\\" + assetsName;
+	std::wstring fullPath = m_assetsPath + L'\\\\' + assetsName;
+	return fullPath;
 }
 
 void IDX::GetAssetsPath(WCHAR* assetPath, size_t bufferSize)
 {
 	std::filesystem::path executablePath = std::filesystem::absolute(std::filesystem::path(__FILE__)).parent_path();
-	std::filesystem::path projectFolderPath = executablePath / L"PythagorasTheorem";
-	std::filesystem::path assetsFolderPath = projectFolderPath / L"Assets";
-	std::wstring assetsStringPath = assetsFolderPath.wstring();
+
+	std::wstring projectName = L"PythagorasTheorem";
+	std::filesystem::path projectFolderPath = executablePath.parent_path();
+
+	projectFolderPath /= projectName;
+
+	std::wstring assetsStringPath = projectFolderPath.wstring();
+	std::replace(assetsStringPath.begin(), assetsStringPath.end(), L'/', L'\\');
+
 	if (assetsStringPath.size() < bufferSize) {
 		wcsncpy_s(assetPath, bufferSize, assetsStringPath.c_str(), _TRUNCATE);
 	}

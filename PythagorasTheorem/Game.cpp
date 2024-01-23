@@ -157,7 +157,7 @@ void Game::LoadAssets()
 	D3DCompileFromFile(GetAssetsFullPath(L"Shader.hlsl").c_str(), nullptr, nullptr, 
 		"VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr);	
 	D3DCompileFromFile(GetAssetsFullPath(L"Shader.hlsl").c_str(), nullptr, nullptr, 
-		"PSMain", "vs_5_0", compileFlags, 0, &pixelShader, nullptr);
+		"PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr);
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescriptors[]
 	{
